@@ -5,7 +5,7 @@
 # -------------------------------------------------------------------------
 
   # The purpose of this script is to perform differential expression
-  # analysis using DESeq2. This script can be used for analyzing RNA-seq and 
+  # analysis using DESeq. This script can be used for analyzing RNA-seq and 
   # nascent-RNA seq (PRO-seq). 
 
   # Here it is being applied to PRO-seq and RNA-seq data generated from LCLs 
@@ -34,10 +34,12 @@
   # Import libraries and source custom functions
   library(tidyverse)
   library(DESeq2)
+  source(paste0('/Users/meco9877/Documents/Projects/ifnb_regression/intrahuman',
+                '_ifnb/deseq2_helper_functions.R'))
+
   
   path <- dirname(rstudioapi::getSourceEditorContext()$path)
   path
-  source(paste0('deseq2_helper_functions.R'))
   setwd(paste0(path, '/..'))
   getwd()
 
@@ -70,7 +72,7 @@
 
   
   counts_import <- read_csv(data_load)
-  print(counts_import[1:3, 1:6])
+  print(counts_import[1:3, 1:9])
   
 # -------------------------------------------------------------------------
 # Create data and metadata for deseq --------------------------------------
@@ -120,9 +122,8 @@
                                design = deseq_design) 
   
   
-# Filter out lowly expressed genes. PRO-seq only has two replicates and RNA-seq
-# has 3 replicates, so adjust read count cut-off to reflect replicates and 
-# depth
+# Filter out lowly expressed genes. PRO-seq only have two replicates and RNA-seq
+# has 3 replicates, so adjust read count cut-off to reflect this. 
   
   if (seq_mode == 'pro'){
     smallestGroupSize <- 2
@@ -148,8 +149,8 @@
   # should not be used to calculate size factors for normalizing library size
   
   chr21_genes <- counts_import[counts_import$Chr == 'chr21', ]$Gene
-  control_genes <- getControlGenes(counts_import)
-  normFactors <- normChr21(dds, metadata, chr21_genes, control_genes) 
+  control_genes <- getControlGenes(counts_import, dds)
+  normFactors <- normChr21(dds, metadata, chr21_genes)
   
   
 # -------------------------------------------------------------------------
@@ -179,8 +180,7 @@
 # Save counts 
   vs_df <- as.data.frame(vs_matrix) %>% rownames_to_column('Gene')
   write_csv(vs_df, 
-            file = paste0(savedir_data, 'pop_', str_to_lower(seq_mode), 
-                          'seq_counts_vst.csv'))  
+            file = paste0(savedir_data, 'pop_', str_to_lower(seq_mode), 'seq_counts_vst.csv'))  
 
   
 # -------------------------------------------------------------------------
@@ -226,9 +226,9 @@
 # Write DESeq2 Results ----------------------------------------------------
 # -------------------------------------------------------------------------
   
-  write_csv(df_res, 
-            file = paste0(savedir_data, 'pop_', str_to_lower(seq_mode), 
-                          '_dt_res.csv'))  
+  write_csv(df_res,
+            file = paste0(savedir_data, 'pop_', str_to_lower(seq_mode),
+                          ifelse(seq_mode == 'PRO', '_dt_gene_res.csv', '_dt_res.csv')))
 
   
 # -------------------------------------------------------------------------
@@ -242,9 +242,10 @@
     ggsave(filename = paste0(savedir_figs, res_name, '_', str_to_lower(seq_mode), 
                              '_maplot.png'),
            p,
-           height = 4, width = 6)
+           height = 5, width = 6)
   }
-
+  
+  
   
 # -------------------------------------------------------------------------
 # PCA plots ---------------------------------------------------------------
